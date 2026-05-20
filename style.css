@@ -197,3 +197,157 @@ body {
 @media (max-width: 480px) {
   .zone-numero input { font-size: 1.3rem; }
 }
+
+/* Popup post-appel */
+
+.popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.popup-overlay.visible {
+  display: flex;
+}
+
+.popup-carte {
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 20px;
+  padding: 2rem 1.5rem;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.popup-numero {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.popup-question {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.popup-boutons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.btn-parle,
+.btn-pas-repondu {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-parle { background: var(--vert); color: #000; }
+.btn-parle:active { transform: scale(0.96); }
+
+.btn-pas-repondu { background: var(--rouge); color: #fff; }
+.btn-pas-repondu:active { transform: scale(0.96); }
+
+/* Historique */
+
+.zone-historique {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.onglets {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.onglet {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.onglet.actif {
+  border-color: var(--vert);
+  color: var(--texte);
+}
+
+.liste-appels {
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.liste-vide {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.88rem;
+  padding: 1.25rem 0;
+}
+
+.entree-appel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+}
+
+.entree-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.numero-affiche {
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.date-appel {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.btn-rappeler {
+  background: var(--vert);
+  color: #000;
+  border: none;
+  border-radius: 9px;
+  padding: 0.45rem 0.8rem;
+  font-size: 1rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+
+.btn-rappeler:active { transform: scale(0.92); }

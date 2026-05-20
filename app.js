@@ -4,16 +4,26 @@ let device = null;
 let appelActif = null;
 let intervalTimer = null;
 let secondesEcoulees = 0;
+let dernierNumero = null;
+let appelTente = false;
 
-const champNumero      = document.getElementById('champNumero');
-const btnDemarrer      = document.getElementById('btnDemarrer');
-const btnAppeler       = document.getElementById('btnAppeler');
-const btnRaccrocher    = document.getElementById('btnRaccrocher');
-const texteStatut      = document.getElementById('texteStatut');
-const pastilleStatut   = document.getElementById('pastilleStatut');
-const zoneTimer        = document.getElementById('zoneTimer');
-const timerAffichage   = document.getElementById('timer');
+const HISTORIQUE_KEY = 'dialerHistory';
+
+const champNumero       = document.getElementById('champNumero');
+const btnDemarrer       = document.getElementById('btnDemarrer');
+const btnAppeler        = document.getElementById('btnAppeler');
+const btnRaccrocher     = document.getElementById('btnRaccrocher');
+const texteStatut       = document.getElementById('texteStatut');
+const pastilleStatut    = document.getElementById('pastilleStatut');
+const zoneTimer         = document.getElementById('zoneTimer');
+const timerAffichage    = document.getElementById('timer');
 const callerIdAffichage = document.getElementById('callerIdAffichage');
+const popupOverlay      = document.getElementById('popupOverlay');
+const popupNumero       = document.getElementById('popupNumero');
+const btnParle          = document.getElementById('btnParle');
+const btnPasRepondu     = document.getElementById('btnPasRepondu');
+const listeRappeler     = document.getElementById('listeRappeler');
+const listeParle        = document.getElementById('listeParle');
 
 // --- Utilitaires ---
 
@@ -48,7 +58,102 @@ function etatAppelActif(actif) {
   btnAppeler.style.display    = actif ? 'none'  : 'block';
 }
 
-// Bouton Démarrer — nécessaire sur mobile (iOS exige gesture avant AudioContext)
+// --- Historique ---
+
+function chargerHistorique() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORIQUE_KEY)) || { parle: [], rappeler: [] };
+  } catch { return { parle: [], rappeler: [] }; }
+}
+
+function sauvegarderStatut(numero, statut) {
+  const h = chargerHistorique();
+  h.parle    = h.parle.filter(e => e.numero !== numero);
+  h.rappeler = h.rappeler.filter(e => e.numero !== numero);
+  h[statut].unshift({ numero, ts: Date.now() });
+  localStorage.setItem(HISTORIQUE_KEY, JSON.stringify(h));
+  rendreListes();
+}
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  const maintenant = new Date();
+  if (d.toDateString() === maintenant.toDateString()) {
+    return d.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+  }
+  return d.toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' });
+}
+
+function rendreListe(conteneur, entrees, avecRappel) {
+  if (entrees.length === 0) {
+    conteneur.innerHTML = '<p class="liste-vide">Aucun appel</p>';
+    return;
+  }
+  conteneur.innerHTML = entrees.map(e => `
+    <div class="entree-appel">
+      <div class="entree-info">
+        <span class="numero-affiche">${e.numero}</span>
+        <span class="date-appel">${formatDate(e.ts)}</span>
+      </div>
+      ${avecRappel ? `<button class="btn-rappeler" data-numero="${e.numero}">📞</button>` : ''}
+    </div>
+  `).join('');
+
+  if (avecRappel) {
+    conteneur.querySelectorAll('.btn-rappeler').forEach(btn => {
+      btn.addEventListener('click', () => rappelerNumero(btn.dataset.numero));
+    });
+  }
+}
+
+function rendreListes() {
+  const h = chargerHistorique();
+  rendreListe(listeRappeler, h.rappeler, true);
+  rendreListe(listeParle, h.parle, false);
+}
+
+function rappelerNumero(numero) {
+  champNumero.value = numero;
+  btnAppeler.disabled = !numeroValide() || !!appelActif;
+  if (device && !appelActif && numeroValide()) {
+    btnAppeler.click();
+  }
+}
+
+// --- Popup ---
+
+function afficherPopup(numero) {
+  popupNumero.textContent = numero;
+  popupOverlay.classList.add('visible');
+}
+
+function fermerPopup() {
+  popupOverlay.classList.remove('visible');
+}
+
+btnParle.addEventListener('click', () => {
+  sauvegarderStatut(dernierNumero, 'parle');
+  fermerPopup();
+});
+
+btnPasRepondu.addEventListener('click', () => {
+  sauvegarderStatut(dernierNumero, 'rappeler');
+  fermerPopup();
+});
+
+// --- Onglets ---
+
+document.querySelectorAll('.onglet').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.onglet').forEach(b => b.classList.remove('actif'));
+    btn.classList.add('actif');
+    listeRappeler.style.display = btn.dataset.tab === 'rappeler' ? 'flex' : 'none';
+    listeParle.style.display    = btn.dataset.tab === 'parle'    ? 'flex' : 'none';
+  });
+});
+
+// --- Bouton Démarrer — nécessaire sur mobile (iOS exige gesture avant AudioContext) ---
+
 btnDemarrer.addEventListener('click', async () => {
   btnDemarrer.disabled = true;
   btnDemarrer.style.display = 'none';
@@ -99,7 +204,6 @@ async function initialiserDevice() {
       setStatut('Erreur: ' + err.message, 'erreur');
     });
 
-    // Sécurité: si le device coupe en cours d'appel
     device.on('disconnect', () => {
       if (appelActif) terminerAppel();
     });
@@ -118,7 +222,10 @@ btnAppeler.addEventListener('click', async () => {
   if (!device || appelActif || !numeroValide()) return;
 
   const chiffres = champNumero.value.replace(/\D/g, '');
-  const numeroE164 = '+1' + chiffres; // Format E.164 Canada
+  const numeroE164 = '+1' + chiffres;
+
+  dernierNumero = champNumero.value;
+  appelTente = true;
 
   setStatut('Connexion...', 'attente');
   btnAppeler.disabled = true;
@@ -152,11 +259,20 @@ btnRaccrocher.addEventListener('click', () => {
 // --- Fin d'appel (tous les cas) ---
 
 function terminerAppel(messageStatut) {
+  const numero = dernierNumero;
+  const tente = appelTente;
+
   appelActif = null;
+  appelTente = false;
   arreterTimer();
   etatAppelActif(false);
   setStatut(messageStatut || 'Appel terminé', 'pret');
   btnAppeler.disabled = !numeroValide();
+
+  if (tente && numero) {
+    afficherPopup(numero);
+  }
+
   setTimeout(() => {
     if (texteStatut.textContent !== 'Prêt') setStatut('Prêt', 'pret');
   }, 3000);
@@ -165,3 +281,4 @@ function terminerAppel(messageStatut) {
 // --- Démarrage ---
 
 setStatut('Appuie Démarrer', '');
+rendreListes();

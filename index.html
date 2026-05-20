@@ -10,6 +10,19 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- Popup post-appel -->
+  <div class="popup-overlay" id="popupOverlay">
+    <div class="popup-carte">
+      <p class="popup-numero" id="popupNumero"></p>
+      <p class="popup-question">Comment ça s'est passé ?</p>
+      <div class="popup-boutons">
+        <button class="btn-parle" id="btnParle">✅ J'ai parlé</button>
+        <button class="btn-pas-repondu" id="btnPasRepondu">❌ Pas répondu</button>
+      </div>
+    </div>
+  </div>
+
   <div class="conteneur">
 
     <div class="entete">
@@ -41,6 +54,16 @@
       <button id="btnDemarrer" class="btn-demarrer">🎙 Démarrer</button>
       <button id="btnAppeler" class="btn-appeler" disabled style="display:none">📞 Appeler</button>
       <button id="btnRaccrocher" class="btn-raccrocher" style="display:none">🔴 Raccrocher</button>
+    </div>
+
+    <!-- Historique -->
+    <div class="zone-historique">
+      <div class="onglets">
+        <button class="onglet actif" data-tab="rappeler">❌ À rappeler</button>
+        <button class="onglet" data-tab="parle">✅ Parlé</button>
+      </div>
+      <div class="liste-appels" id="listeRappeler"></div>
+      <div class="liste-appels" id="listeParle" style="display:none"></div>
     </div>
 
   </div>
