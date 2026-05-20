@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm install && cp node_modules/@twilio/voice-sdk/dist/twilio.min.js .",
+  "outputDirectory": ".",
   "headers": [
     {
       "source": "/api/(.*)",
