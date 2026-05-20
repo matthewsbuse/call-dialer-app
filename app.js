@@ -6,6 +6,7 @@ let intervalTimer = null;
 let secondesEcoulees = 0;
 
 const champNumero      = document.getElementById('champNumero');
+const btnDemarrer      = document.getElementById('btnDemarrer');
 const btnAppeler       = document.getElementById('btnAppeler');
 const btnRaccrocher    = document.getElementById('btnRaccrocher');
 const texteStatut      = document.getElementById('texteStatut');
@@ -46,6 +47,14 @@ function etatAppelActif(actif) {
   btnRaccrocher.style.display = actif ? 'block' : 'none';
   btnAppeler.style.display    = actif ? 'none'  : 'block';
 }
+
+// Bouton Démarrer — nécessaire sur mobile (iOS exige gesture avant AudioContext)
+btnDemarrer.addEventListener('click', async () => {
+  btnDemarrer.disabled = true;
+  btnDemarrer.style.display = 'none';
+  btnAppeler.style.display = 'block';
+  await initialiserDevice();
+});
 
 function numeroValide() {
   return champNumero.value.replace(/\D/g, '').length === 10;
@@ -155,4 +164,4 @@ function terminerAppel(messageStatut) {
 
 // --- Démarrage ---
 
-initialiserDevice();
+setStatut('Appuie Démarrer', '');
