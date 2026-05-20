@@ -6,9 +6,11 @@
     "node": ">=18"
   },
   "dependencies": {
-    "twilio": "^5.0.0"
+    "twilio": "^5.0.0",
+    "@twilio/voice-sdk": "^2.0.0"
   },
   "scripts": {
+    "build": "cp node_modules/@twilio/voice-sdk/dist/twilio.min.js .",
     "dev": "vercel dev",
     "deploy": "vercel --prod"
   }
