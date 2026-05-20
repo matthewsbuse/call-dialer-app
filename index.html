@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Dialer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="conteneur">
+
+    <div class="entete">
+      <span class="titre">Dialer</span>
+      <span class="caller-id" id="callerIdAffichage">—</span>
+    </div>
+
+    <div class="zone-statut">
+      <div class="pastille" id="pastilleStatut"></div>
+      <span id="texteStatut">Initialisation...</span>
+    </div>
+
+    <div class="zone-timer" id="zoneTimer">
+      <span id="timer">00:00</span>
+    </div>
+
+    <div class="zone-numero">
+      <input
+        type="tel"
+        id="champNumero"
+        placeholder="418-xxx-xxxx"
+        maxlength="12"
+        autocomplete="tel"
+        inputmode="tel"
+      />
+    </div>
+
+    <div class="zone-boutons">
+      <button id="btnAppeler" class="btn-appeler" disabled>📞 Appeler</button>
+      <button id="btnRaccrocher" class="btn-raccrocher" style="display:none">🔴 Raccrocher</button>
+    </div>
+
+  </div>
+
+  <!-- Twilio Voice SDK v2 (UMD — expose global Twilio) -->
+  <script src="https://unpkg.com/@twilio/voice-sdk@2/dist/twilio.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
