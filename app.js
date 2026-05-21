@@ -56,7 +56,7 @@ let dernierNumero = null;
 let appelTente = false;
 let crmContactActif = null;
 let wakeLock = null;
-let silentAudio = null;
+let silenceCount = 0;
 
 // --- Keys ---
 const HISTORIQUE_KEY = 'dialerHistory';
@@ -116,53 +116,60 @@ function etatAppelActif(actif) {
   btnAppeler.style.display    = actif ? 'none'  : 'block';
 }
 
-// --- Garde audio en background ---
-// HTMLAudioElement est traité par iOS comme "media actif" (même mécanisme que Spotify web)
-// → continue en background contrairement à Web Audio API.
-// WAV minimal valide (1 sample silence) encodé en base64.
-const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+// --- Récupération micro iOS ---
+// Quand iOS background une page, le MediaStreamTrack du micro se mute ou se termine.
+// Fix: détecter le retour en foreground → forcer nouveau getUserMedia via cycle
+// unsetInputDevice/setInputDevice. C'est ce que Twilio Video SDK fait en interne.
+
+async function recupererMicro() {
+  if (!device || !appelActif) return;
+  setStatut('Reconnexion micro...', 'attente');
+  try {
+    await device.audio.unsetInputDevice();
+    await device.audio.setInputDevice('default');
+    setStatut('En appel ↗', 'appel');
+  } catch (e) {
+    setStatut('En appel ↗', 'appel');
+  }
+  silenceCount = 0;
+}
+
+// Retour en foreground → attendre 500ms (iOS stabilise session audio) → reacquérir micro
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && appelActif) {
+    setTimeout(() => recupererMicro(), 500);
+  }
+});
+
+// AudioProcessor: surveille les events track "ended" et "mute" sur le stream Twilio
+class MicMonitorProcessor {
+  async createProcessedStream(stream) {
+    const track = stream.getAudioTracks()[0];
+    if (track) {
+      track.addEventListener('ended', () => {
+        if (appelActif && !document.hidden) recupererMicro();
+      });
+      track.addEventListener('mute', () => {
+        if (appelActif && !document.hidden) setTimeout(() => recupererMicro(), 300);
+      });
+    }
+    return stream;
+  }
+  async destroyProcessedStream(stream) {}
+}
 
 function activerGardeAudio() {
-  // 1. WakeLock: garde l'écran allumé, réduit les chances de suspension
+  // WakeLock: garde écran allumé → iOS suspend moins la page
   if ('wakeLock' in navigator) {
     navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
   }
-
-  // 2. HTMLAudioElement en loop: iOS continue ce type d'audio quand app en background
-  if (!silentAudio) {
-    silentAudio = new Audio(SILENT_WAV);
-    silentAudio.loop = true;
-    silentAudio.volume = 0.01; // pas 0 — iOS ignore les éléments muets
-  }
-  silentAudio.play().catch(() => {});
-
-  // 3. MediaSession: signale à l'OS que l'app fait de l'audio actif (phone call)
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({ title: 'Appel en cours — Dialer' });
-    navigator.mediaSession.playbackState = 'playing';
-  }
+  silenceCount = 0;
 }
 
 function desactiverGardeAudio() {
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
-  if (silentAudio) { silentAudio.pause(); silentAudio = null; }
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.playbackState = 'none';
-    navigator.mediaSession.metadata = null;
-  }
+  silenceCount = 0;
 }
-
-// Quand utilisateur revient sur la page pendant appel actif
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && appelActif) {
-    // Re-demander WakeLock (auto-libéré quand page masquée)
-    if ('wakeLock' in navigator) {
-      navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
-    }
-    // Reprendre l'audio si suspendu
-    if (silentAudio && silentAudio.paused) silentAudio.play().catch(() => {});
-  }
-});
 
 // --- CRM ---
 
@@ -426,6 +433,9 @@ async function initialiserDevice() {
       codecPreferences: ['opus', 'pcmu'],
     });
 
+    // Surveille le track micro — détecte si iOS le coupe
+    device.audio.addProcessor(new MicMonitorProcessor());
+
     device.on('registered', () => {
       setStatut('Prêt', 'pret');
       btnAppeler.disabled = !numeroValide();
@@ -478,6 +488,19 @@ btnAppeler.addEventListener('click', async () => {
       etatAppelActif(true);
       demarrerTimer();
       activerGardeAudio();
+    });
+
+    // Détecte micro silencieux prolongé en foreground → récupère automatiquement
+    // volume() fire toutes les ~50ms; 60 ticks = ~3 secondes de silence
+    appelActif.on('volume', (inputVolume) => {
+      if (!document.hidden) {
+        if (inputVolume === 0) {
+          silenceCount++;
+          if (silenceCount === 60) recupererMicro();
+        } else {
+          silenceCount = 0;
+        }
+      }
     });
 
     appelActif.on('disconnect', () => terminerAppel());
