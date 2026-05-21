@@ -54,7 +54,9 @@ let intervalTimer = null;
 let secondesEcoulees = 0;
 let dernierNumero = null;
 let appelTente = false;
-let crmContactActif = null; // id du contact CRM en cours d'appel
+let crmContactActif = null;
+let wakeLock = null;
+let silentAudio = null;
 
 // --- Keys ---
 const HISTORIQUE_KEY = 'dialerHistory';
@@ -113,6 +115,52 @@ function etatAppelActif(actif) {
   btnRaccrocher.style.display = actif ? 'block' : 'none';
   btnAppeler.style.display    = actif ? 'none'  : 'block';
 }
+
+// --- Garde audio en background ---
+
+async function activerGardeAudio() {
+  // WakeLock: garde l'écran allumé → moins de suspension
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
+  }
+
+  // Silent audio loop: trick iOS pour garder AudioContext vivant quand app en background.
+  // gain = 0.001 (pas zéro — iOS ignore les sources silencieuses à gain = 0)
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); // 1s silence
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.001;
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    source.start();
+    silentAudio = { ctx, source };
+  } catch (e) {}
+}
+
+function desactiverGardeAudio() {
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  if (silentAudio) {
+    try { silentAudio.source.stop(); silentAudio.ctx.close(); } catch (e) {}
+    silentAudio = null;
+  }
+}
+
+// Quand utilisateur revient sur la page pendant un appel actif
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && appelActif) {
+    // Re-demander WakeLock (libéré auto quand page masquée)
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
+    }
+    // Reprendre le contexte audio silencieux (suspendu par le browser)
+    if (silentAudio) silentAudio.ctx.resume().catch(() => {});
+  }
+});
 
 // --- CRM ---
 
@@ -427,6 +475,7 @@ btnAppeler.addEventListener('click', async () => {
       setStatut('En appel ↗', 'appel');
       etatAppelActif(true);
       demarrerTimer();
+      activerGardeAudio();
     });
 
     appelActif.on('disconnect', () => terminerAppel());
@@ -456,6 +505,7 @@ function terminerAppel(messageStatut) {
   appelActif = null;
   appelTente = false;
   arreterTimer();
+  desactiverGardeAudio();
   etatAppelActif(false);
   setStatut(messageStatut || 'Appel terminé', 'pret');
   btnAppeler.disabled = !numeroValide();
