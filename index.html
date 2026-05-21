@@ -11,6 +11,20 @@
 </head>
 <body>
 
+  <!-- Login overlay -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-carte">
+      <div class="login-titre">Dialer</div>
+      <div class="login-sous-titre">Connexion requise</div>
+      <form id="loginForm">
+        <input type="text" id="loginUser" placeholder="Nom d'utilisateur" autocomplete="username" />
+        <input type="password" id="loginMdp" placeholder="Mot de passe" autocomplete="current-password" />
+        <div class="login-erreur" id="loginErreur">Identifiants incorrects</div>
+        <button type="submit" class="btn-login">Connexion</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Popup post-appel -->
   <div class="popup-overlay" id="popupOverlay">
     <div class="popup-carte">
@@ -56,8 +70,28 @@
       <button id="btnRaccrocher" class="btn-raccrocher" style="display:none">🔴 Raccrocher</button>
     </div>
 
-    <!-- Historique -->
-    <div class="zone-historique">
+    <!-- Tabs principales -->
+    <div class="tabs-main">
+      <button class="tab-main actif" data-tab="crm">🎯 CRM</button>
+      <button class="tab-main" data-tab="historique">📋 Historique</button>
+    </div>
+
+    <!-- Panel CRM -->
+    <div id="panelCRM" class="panel-main">
+      <div class="crm-header">
+        <span class="crm-progress" id="crmProgress">0 / 20 contactés</span>
+        <button class="btn-suivant" id="btnSuivant">Suivant →</button>
+      </div>
+      <div class="crm-carte" id="crmCarte">
+        <!-- contact actif injecté par JS -->
+      </div>
+      <div class="crm-liste" id="crmListe">
+        <!-- tous les contacts -->
+      </div>
+    </div>
+
+    <!-- Panel Historique -->
+    <div id="panelHistorique" class="panel-main" style="display:none">
       <div class="onglets">
         <button class="onglet actif" data-tab="rappeler">❌ À rappeler</button>
         <button class="onglet" data-tab="parle">✅ Parlé</button>

@@ -1,14 +1,66 @@
-// === Dialer — Twilio Voice SDK v2 ===
+// === Dialer — Twilio Voice SDK v2 + CRM ===
 
+// --- Auth ---
+const AUTH_KEY = 'dialerAuth';
+
+function verifierAuth() {
+  if (sessionStorage.getItem(AUTH_KEY) !== '1') {
+    document.getElementById('loginOverlay').style.display = 'flex';
+  }
+}
+
+document.getElementById('loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginMdp').value;
+  if (u === 'admin' && p === 'admin') {
+    sessionStorage.setItem(AUTH_KEY, '1');
+    document.getElementById('loginOverlay').style.display = 'none';
+  } else {
+    document.getElementById('loginErreur').style.display = 'block';
+  }
+});
+
+verifierAuth();
+
+// --- CRM Data ---
+const CRM_DATA_INITIALE = [
+  { id:  1, nom: "Complexe Nettoyage Saguenay",         tel: "418-602-3874", adresse: "2147 boul Talbot, Chicoutimi",             site: "https://complexenettoyagesaguenay.com" },
+  { id:  2, nom: "Autolook Inc",                         tel: "418-696-1352", adresse: "205 rue des Laurentides, Chicoutimi",       site: "https://garageautolook.com" },
+  { id:  3, nom: "Unique Auto Shine",                    tel: "418-973-5666", adresse: "1462 boul Saint-Paul, Chicoutimi",          site: "" },
+  { id:  4, nom: "Lave-Auto W",                          tel: "581-574-8484", adresse: "990 ch de la Réserve, Chicoutimi",          site: "https://laveautow.com" },
+  { id:  5, nom: "Lave Auto Quatre Saisons",             tel: "418-695-4444", adresse: "3449 rue de l'Énergie, Jonquière",          site: "https://laveautojonquiere.com" },
+  { id:  6, nom: "Lave Auto Expert 2003",                tel: "418-542-5353", adresse: "3581 rue de l'Énergie, Jonquière",          site: "" },
+  { id:  7, nom: "Centre Esthétique Alexis-Le-Trotteur", tel: "418-695-0999", adresse: "2305 rue Alexis-Le-Trotteur, Jonquière",    site: "" },
+  { id:  8, nom: "S'a Coche Esthétique Auto",            tel: "418-487-8065", adresse: "221 1re Av. Nord, Saint-Nazaire",           site: "https://sacocheesthetiqueautomobile.com" },
+  { id:  9, nom: "Garage Ghislain Leclerc",              tel: "418-275-2724", adresse: "1638 boul Marcotte, Roberval",              site: "https://garageghislainleclerc.ca" },
+  { id: 10, nom: "Lave-Auto Centre-Ville",               tel: "418-693-3016", adresse: "29 rue Bossé, Chicoutimi",                  site: "" },
+  { id: 11, nom: "Lave-Auto Optimum",                    tel: "418-818-9307", adresse: "2547 rue Godbout, Jonquière",               site: "https://laveautooptimum.com" },
+  { id: 12, nom: "Multi-Shine Saguenay",                 tel: "418-549-5555", adresse: "524 boul du Royaume O, Chicoutimi",         site: "" },
+  { id: 13, nom: "Autoluxe 2000",                        tel: "418-695-2353", adresse: "Jonquière",                                 site: "" },
+  { id: 14, nom: "Esthétique GS",                        tel: "581-235-4095", adresse: "245 rte de Tadoussac, Canton-Tremblay",     site: "" },
+  { id: 15, nom: "Lave-Auto du Royaume",                 tel: "418-290-0075", adresse: "2341B boul du Royaume, Jonquière",          site: "" },
+  { id: 16, nom: "Détailing Jonquière",                  tel: "418-548-3022", adresse: "1742 rue Hoopes, Jonquière",                site: "" },
+  { id: 17, nom: "Lave-Auto Chic",                       tel: "",              adresse: "1741 boul Talbot, Chicoutimi",              site: "" },
+  { id: 18, nom: "Auto Flash 2000",                      tel: "",              adresse: "2706 boul Talbot, Chicoutimi",              site: "" },
+  { id: 19, nom: "Lave-Auto LD Esso",                    tel: "",              adresse: "1455 boul Talbot, Chicoutimi",              site: "" },
+  { id: 20, nom: "Garage Raymond Roy",                   tel: "",              adresse: "Jonquière",                                 site: "" },
+];
+
+// --- State ---
 let device = null;
 let appelActif = null;
 let intervalTimer = null;
 let secondesEcoulees = 0;
 let dernierNumero = null;
 let appelTente = false;
+let crmContactActif = null; // id du contact CRM en cours d'appel
 
+// --- Keys ---
 const HISTORIQUE_KEY = 'dialerHistory';
+const CRM_KEY = 'dialerCRM';
 
+// --- DOM Refs ---
 const champNumero       = document.getElementById('champNumero');
 const btnDemarrer       = document.getElementById('btnDemarrer');
 const btnAppeler        = document.getElementById('btnAppeler');
@@ -24,6 +76,10 @@ const btnParle          = document.getElementById('btnParle');
 const btnPasRepondu     = document.getElementById('btnPasRepondu');
 const listeRappeler     = document.getElementById('listeRappeler');
 const listeParle        = document.getElementById('listeParle');
+const crmCarte          = document.getElementById('crmCarte');
+const crmProgress       = document.getElementById('crmProgress');
+const crmListe          = document.getElementById('crmListe');
+const btnSuivant        = document.getElementById('btnSuivant');
 
 // --- Utilitaires ---
 
@@ -57,6 +113,102 @@ function etatAppelActif(actif) {
   btnRaccrocher.style.display = actif ? 'block' : 'none';
   btnAppeler.style.display    = actif ? 'none'  : 'block';
 }
+
+// --- CRM ---
+
+function chargerCRM() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CRM_KEY));
+    if (stored && Array.isArray(stored.contacts)) return stored;
+  } catch {}
+  return { contacts: CRM_DATA_INITIALE.map(c => ({ ...c })), indexActif: 0 };
+}
+
+function sauvegarderCRM(crm) {
+  localStorage.setItem(CRM_KEY, JSON.stringify(crm));
+}
+
+function initialiserCRM() {
+  if (!localStorage.getItem(CRM_KEY)) {
+    sauvegarderCRM({ contacts: CRM_DATA_INITIALE.map(c => ({ ...c })), indexActif: 0 });
+  }
+}
+
+function rendreCRM() {
+  const crm = chargerCRM();
+  const c = crm.contacts[crm.indexActif];
+  if (!c) return;
+
+  // Progress
+  const contactes = crm.contacts.filter(x => x.statut !== 'a_appeler').length;
+  crmProgress.textContent = `${contactes} / ${crm.contacts.length} contactés`;
+
+  // Carte contact actif
+  const siteHtml = c.site
+    ? `<a class="crm-site" href="${c.site}" target="_blank" rel="noopener">${c.site.replace(/^https?:\/\//, '')}</a>`
+    : '';
+  const telHtml = c.tel
+    ? `<span class="crm-tel">${c.tel}</span>`
+    : `<span class="crm-tel crm-tel-manquant">⚠ Téléphone à vérifier</span>`;
+
+  crmCarte.innerHTML = `
+    <div class="crm-nom">${c.nom}</div>
+    ${telHtml}
+    <div class="crm-adresse">📍 ${c.adresse}</div>
+    ${siteHtml}
+  `;
+
+  // Auto-remplir champ numéro si disponible
+  if (c.tel) {
+    champNumero.value = c.tel;
+    champNumero.dispatchEvent(new Event('input'));
+    crmContactActif = c.id;
+  } else {
+    champNumero.value = '';
+    champNumero.dispatchEvent(new Event('input'));
+    crmContactActif = null;
+  }
+
+  // Liste tous les contacts
+  crmListe.innerHTML = crm.contacts.map((contact, i) => {
+    const icone = contact.statut === 'parle' ? '✅' : contact.statut === 'pas_repondu' ? '❌' : '·';
+    const actif = i === crm.indexActif ? 'crm-item-actif' : '';
+    return `
+      <div class="crm-item ${actif} crm-statut-${contact.statut}" data-index="${i}">
+        <span class="crm-item-icone">${icone}</span>
+        <div class="crm-item-info">
+          <span class="crm-item-nom">${contact.nom}</span>
+          <span class="crm-item-tel">${contact.tel || '—'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  crmListe.querySelectorAll('.crm-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const crm2 = chargerCRM();
+      crm2.indexActif = parseInt(el.dataset.index);
+      sauvegarderCRM(crm2);
+      rendreCRM();
+    });
+  });
+}
+
+function avancerCRM() {
+  const crm = chargerCRM();
+  crm.indexActif = (crm.indexActif + 1) % crm.contacts.length;
+  sauvegarderCRM(crm);
+  rendreCRM();
+}
+
+function mettreAJourStatutCRM(contactId, statut) {
+  const crm = chargerCRM();
+  const c = crm.contacts.find(x => x.id === contactId);
+  if (c) c.statut = statut;
+  sauvegarderCRM(crm);
+}
+
+btnSuivant.addEventListener('click', avancerCRM);
 
 // --- Historique ---
 
@@ -113,6 +265,7 @@ function rendreListes() {
 }
 
 function rappelerNumero(numero) {
+  crmContactActif = null;
   champNumero.value = numero;
   btnAppeler.disabled = !numeroValide() || !!appelActif;
   if (device && !appelActif && numeroValide()) {
@@ -122,8 +275,12 @@ function rappelerNumero(numero) {
 
 // --- Popup ---
 
-function afficherPopup(numero) {
-  popupNumero.textContent = numero;
+function afficherPopup(numero, nomContact) {
+  if (nomContact) {
+    popupNumero.innerHTML = `<strong>${nomContact}</strong><br><small style="font-weight:400;letter-spacing:0.05em">${numero}</small>`;
+  } else {
+    popupNumero.textContent = numero;
+  }
   popupOverlay.classList.add('visible');
 }
 
@@ -132,16 +289,43 @@ function fermerPopup() {
 }
 
 btnParle.addEventListener('click', () => {
-  sauvegarderStatut(dernierNumero, 'parle');
-  fermerPopup();
+  const crmId = crmContactActif;
+  crmContactActif = null;
+  if (dernierNumero) sauvegarderStatut(dernierNumero, 'parle');
+  if (crmId !== null) {
+    mettreAJourStatutCRM(crmId, 'parle');
+    fermerPopup();
+    avancerCRM();
+  } else {
+    fermerPopup();
+  }
 });
 
 btnPasRepondu.addEventListener('click', () => {
-  sauvegarderStatut(dernierNumero, 'rappeler');
-  fermerPopup();
+  const crmId = crmContactActif;
+  crmContactActif = null;
+  if (dernierNumero) sauvegarderStatut(dernierNumero, 'rappeler');
+  if (crmId !== null) {
+    mettreAJourStatutCRM(crmId, 'pas_repondu');
+    fermerPopup();
+    avancerCRM();
+  } else {
+    fermerPopup();
+  }
 });
 
-// --- Onglets ---
+// --- Tabs principales ---
+
+document.querySelectorAll('.tab-main').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-main').forEach(b => b.classList.remove('actif'));
+    btn.classList.add('actif');
+    document.getElementById('panelCRM').style.display        = btn.dataset.tab === 'crm'        ? 'block' : 'none';
+    document.getElementById('panelHistorique').style.display = btn.dataset.tab === 'historique' ? 'block' : 'none';
+  });
+});
+
+// --- Onglets Historique ---
 
 document.querySelectorAll('.onglet').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -185,10 +369,7 @@ async function initialiserDevice() {
     if (!rep.ok) throw new Error('Erreur serveur ' + rep.status);
 
     const data = await rep.json();
-
-    if (data.callerNumber) {
-      callerIdAffichage.textContent = data.callerNumber;
-    }
+    if (data.callerNumber) callerIdAffichage.textContent = data.callerNumber;
 
     device = new Twilio.Device(data.token, {
       logLevel: 1,
@@ -220,6 +401,13 @@ async function initialiserDevice() {
 
 btnAppeler.addEventListener('click', async () => {
   if (!device || appelActif || !numeroValide()) return;
+
+  // Vérifier que le numéro correspond encore au contact CRM actif
+  if (crmContactActif !== null) {
+    const crm = chargerCRM();
+    const c = crm.contacts.find(x => x.id === crmContactActif);
+    if (!c || champNumero.value !== c.tel) crmContactActif = null;
+  }
 
   const chiffres = champNumero.value.replace(/\D/g, '');
   const numeroE164 = '+1' + chiffres;
@@ -262,6 +450,9 @@ function terminerAppel(messageStatut) {
   const numero = dernierNumero;
   const tente = appelTente;
 
+  // Capturer crmContactActif avant que les boutons popup le modifient
+  // (crmContactActif reste set pour que les boutons popup le lisent)
+
   appelActif = null;
   appelTente = false;
   arreterTimer();
@@ -270,7 +461,14 @@ function terminerAppel(messageStatut) {
   btnAppeler.disabled = !numeroValide();
 
   if (tente && numero) {
-    afficherPopup(numero);
+    // Trouver nom du contact CRM si applicable
+    let nomContact = null;
+    if (crmContactActif !== null) {
+      const crm = chargerCRM();
+      const c = crm.contacts.find(x => x.id === crmContactActif);
+      if (c) nomContact = c.nom;
+    }
+    afficherPopup(numero, nomContact);
   }
 
   setTimeout(() => {
@@ -280,5 +478,7 @@ function terminerAppel(messageStatut) {
 
 // --- Démarrage ---
 
+initialiserCRM();
 setStatut('Appuie Démarrer', '');
+rendreCRM();
 rendreListes();
