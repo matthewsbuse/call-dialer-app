@@ -117,48 +117,50 @@ function etatAppelActif(actif) {
 }
 
 // --- Garde audio en background ---
+// HTMLAudioElement est traité par iOS comme "media actif" (même mécanisme que Spotify web)
+// → continue en background contrairement à Web Audio API.
+// WAV minimal valide (1 sample silence) encodé en base64.
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 
-async function activerGardeAudio() {
-  // WakeLock: garde l'écran allumé → moins de suspension
+function activerGardeAudio() {
+  // 1. WakeLock: garde l'écran allumé, réduit les chances de suspension
   if ('wakeLock' in navigator) {
     navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
   }
 
-  // Silent audio loop: trick iOS pour garder AudioContext vivant quand app en background.
-  // gain = 0.001 (pas zéro — iOS ignore les sources silencieuses à gain = 0)
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioCtx();
-    const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); // 1s silence
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
-    const gain = ctx.createGain();
-    gain.gain.value = 0.001;
-    source.connect(gain);
-    gain.connect(ctx.destination);
-    source.start();
-    silentAudio = { ctx, source };
-  } catch (e) {}
+  // 2. HTMLAudioElement en loop: iOS continue ce type d'audio quand app en background
+  if (!silentAudio) {
+    silentAudio = new Audio(SILENT_WAV);
+    silentAudio.loop = true;
+    silentAudio.volume = 0.01; // pas 0 — iOS ignore les éléments muets
+  }
+  silentAudio.play().catch(() => {});
+
+  // 3. MediaSession: signale à l'OS que l'app fait de l'audio actif (phone call)
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: 'Appel en cours — Dialer' });
+    navigator.mediaSession.playbackState = 'playing';
+  }
 }
 
 function desactiverGardeAudio() {
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
-  if (silentAudio) {
-    try { silentAudio.source.stop(); silentAudio.ctx.close(); } catch (e) {}
-    silentAudio = null;
+  if (silentAudio) { silentAudio.pause(); silentAudio = null; }
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = 'none';
+    navigator.mediaSession.metadata = null;
   }
 }
 
-// Quand utilisateur revient sur la page pendant un appel actif
+// Quand utilisateur revient sur la page pendant appel actif
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && appelActif) {
-    // Re-demander WakeLock (libéré auto quand page masquée)
+    // Re-demander WakeLock (auto-libéré quand page masquée)
     if ('wakeLock' in navigator) {
       navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
     }
-    // Reprendre le contexte audio silencieux (suspendu par le browser)
-    if (silentAudio) silentAudio.ctx.resume().catch(() => {});
+    // Reprendre l'audio si suspendu
+    if (silentAudio && silentAudio.paused) silentAudio.play().catch(() => {});
   }
 });
 
