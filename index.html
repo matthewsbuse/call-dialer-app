@@ -80,7 +80,10 @@
     <div id="panelCRM" class="panel-main">
       <div class="crm-header">
         <span class="crm-progress" id="crmProgress">0 / 20 contactés</span>
-        <button class="btn-suivant" id="btnSuivant">Suivant →</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-suivant" id="btnSuivant">Suivant →</button>
+          <button class="btn-suivant" id="btnResetCRM" style="background:#c0392b;font-size:12px;padding:6px 10px">↺ Reset</button>
+        </div>
       </div>
       <div class="crm-carte" id="crmCarte">
         <!-- contact actif injecté par JS -->

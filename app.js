@@ -318,6 +318,12 @@ function mettreAJourStatutCRM(contactId, statut) {
 
 btnSuivant.addEventListener('click', avancerCRM);
 
+document.getElementById('btnResetCRM').addEventListener('click', () => {
+  if (!confirm('Remettre le CRM à zéro et recharger les 70 contacts?')) return;
+  localStorage.removeItem('dialerCRM');
+  location.reload();
+});
+
 // --- Historique ---
 
 function chargerHistorique() {
