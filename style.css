@@ -749,3 +749,6 @@ body {
 }
 
 .btn-rappeler:active { transform: scale(0.92); }
+
+.entree-nom { font-size: 0.95rem; font-weight: 600; color: #e0e0e0; }
+.entree-adresse { font-size: 0.72rem; color: #888; font-style: italic; }

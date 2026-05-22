@@ -349,11 +349,11 @@ function chargerHistorique() {
   } catch { return { parle: [], rappeler: [] }; }
 }
 
-function sauvegarderStatut(numero, statut) {
+function sauvegarderStatut(numero, statut, nom = '', adresse = '') {
   const h = chargerHistorique();
   h.parle    = h.parle.filter(e => e.numero !== numero);
   h.rappeler = h.rappeler.filter(e => e.numero !== numero);
-  h[statut].unshift({ numero, ts: Date.now() });
+  h[statut].unshift({ numero, ts: Date.now(), nom, adresse });
   localStorage.setItem(HISTORIQUE_KEY, JSON.stringify(h));
   rendreListes();
 }
@@ -375,7 +375,9 @@ function rendreListe(conteneur, entrees, avecRappel) {
   conteneur.innerHTML = entrees.map(e => `
     <div class="entree-appel">
       <div class="entree-info">
+        ${e.nom ? `<span class="entree-nom">${e.nom}</span>` : ''}
         <span class="numero-affiche">${e.numero}</span>
+        ${e.adresse ? `<span class="entree-adresse">${e.adresse}</span>` : ''}
         <span class="date-appel">${formatDate(e.ts)}</span>
       </div>
       ${avecRappel ? `<button class="btn-rappeler" data-numero="${e.numero}">📞</button>` : ''}
@@ -422,7 +424,10 @@ function fermerPopup() {
 btnParle.addEventListener('click', () => {
   const crmId = crmContactActif;
   crmContactActif = null;
-  if (dernierNumero) sauvegarderStatut(dernierNumero, 'parle');
+  if (dernierNumero) {
+    const contact = crmId !== null ? chargerCRM().contacts.find(x => x.id === crmId) : null;
+    sauvegarderStatut(dernierNumero, 'parle', contact?.nom || '', contact?.adresse || '');
+  }
   if (crmId !== null) {
     mettreAJourStatutCRM(crmId, 'parle');
     fermerPopup();
@@ -435,7 +440,10 @@ btnParle.addEventListener('click', () => {
 btnPasRepondu.addEventListener('click', () => {
   const crmId = crmContactActif;
   crmContactActif = null;
-  if (dernierNumero) sauvegarderStatut(dernierNumero, 'rappeler');
+  if (dernierNumero) {
+    const contact = crmId !== null ? chargerCRM().contacts.find(x => x.id === crmId) : null;
+    sauvegarderStatut(dernierNumero, 'rappeler', contact?.nom || '', contact?.adresse || '');
+  }
   if (crmId !== null) {
     mettreAJourStatutCRM(crmId, 'pas_repondu');
     fermerPopup();
