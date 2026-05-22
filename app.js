@@ -281,12 +281,13 @@ function rendreCRM() {
   crmListe.innerHTML = crm.contacts.map((contact, i) => {
     const icone = contact.statut === 'parle' ? '✅' : contact.statut === 'pas_repondu' ? '❌' : '·';
     const actif = i === crm.indexActif ? 'crm-item-actif' : '';
+    const dateLabel = contact.id <= 20 ? '21 mai 2026' : '22 mai 2026';
     return `
       <div class="crm-item ${actif} crm-statut-${contact.statut}" data-index="${i}">
         <span class="crm-item-icone">${icone}</span>
         <div class="crm-item-info">
           <span class="crm-item-nom">${contact.nom}</span>
-          <span class="crm-item-tel">${contact.tel || '—'}</span>
+          <span class="crm-item-tel">${contact.tel || '—'} <span style="font-size:10px;opacity:0.5;margin-left:4px">${dateLabel}</span></span>
         </div>
       </div>
     `;
@@ -319,8 +320,13 @@ function mettreAJourStatutCRM(contactId, statut) {
 btnSuivant.addEventListener('click', avancerCRM);
 
 document.getElementById('btnResetCRM').addEventListener('click', () => {
-  if (!confirm('Remettre le CRM à zéro et recharger les 70 contacts?')) return;
-  localStorage.removeItem('dialerCRM');
+  if (!confirm('Ajouter les nouveaux contacts Beauce sans effacer les statuts existants?')) return;
+  const crm = chargerCRM();
+  const idsExistants = new Set(crm.contacts.map(c => c.id));
+  const nouveaux = CRM_DATA_INITIALE.filter(c => !idsExistants.has(c.id)).map(c => ({ ...c }));
+  if (nouveaux.length === 0) { alert('Tous les contacts sont déjà chargés.'); return; }
+  crm.contacts = [...crm.contacts, ...nouveaux];
+  sauvegarderCRM(crm);
   location.reload();
 });
 
