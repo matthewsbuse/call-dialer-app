@@ -193,6 +193,19 @@ body {
 
 .btn-raccrocher:active { transform: scale(0.96); }
 
+.btn-script {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  background: #1565c0;
+  color: #fff;
+  cursor: pointer;
+}
+.btn-script:active { transform: scale(0.96); }
+
 /* Sécurité : empêche zoom iOS sur focus input */
 @media (max-width: 480px) {
   .zone-numero input { font-size: 1.3rem; }

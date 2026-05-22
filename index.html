@@ -68,6 +68,27 @@
       <button id="btnDemarrer" class="btn-demarrer">🎙 Démarrer</button>
       <button id="btnAppeler" class="btn-appeler" disabled style="display:none">📞 Appeler</button>
       <button id="btnRaccrocher" class="btn-raccrocher" style="display:none">🔴 Raccrocher</button>
+      <button id="btnScript" class="btn-script" style="display:none">📋 Script</button>
+    </div>
+
+    <!-- Script overlay -->
+    <div id="scriptOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;overflow-y:auto;padding:20px">
+      <div style="background:#1a1a2e;border-radius:12px;padding:20px;max-width:500px;margin:0 auto;color:#eee;font-size:15px;line-height:1.7">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-weight:bold;font-size:16px;color:#4fc3f7">📋 Script d'appel</span>
+          <button id="btnFermerScript" style="background:#444;border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:14px;cursor:pointer">✕ Fermer</button>
+        </div>
+        <div style="background:#0d1117;border-radius:8px;padding:16px;border-left:3px solid #4fc3f7">
+          <p><em style="color:#aaa">Intro</em><br>Salut, est-ce que je parle au propriétaire?</p>
+          <hr style="border-color:#333;margin:12px 0">
+          <p><em style="color:#aaa">Ouverture</em><br>Yes, salut! Steeven de Genesys — j'imagine t'es pas mal occupé présentement?</p>
+          <hr style="border-color:#333;margin:12px 0">
+          <p><em style="color:#aaa">Pitch</em><br>C'est ça, en passant — je suis pas un vendeur. Chu développeur React JS / JSON, je fais des applications Google Play Store, Apple Store, formé en IA aussi.<br><br>
+          Je bâtis des automatisations sur mesure — ventes, facturation, relance, comptabilité, reviews. Dans le fond, des systèmes pour te faire faire plus d'argent en moins de temps.</p>
+          <hr style="border-color:#333;margin:12px 0">
+          <p><em style="color:#aaa">Closing</em><br>J'imagine t'es vraiment occupé présentement — quand est-ce que t'aurais un 15 minutes pour que je vienne évaluer tout ça dans une vidéoconférence?</p>
+        </div>
+      </div>
     </div>
 
     <!-- Tabs principales -->

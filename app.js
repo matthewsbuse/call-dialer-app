@@ -118,6 +118,8 @@ const champNumero       = document.getElementById('champNumero');
 const btnDemarrer       = document.getElementById('btnDemarrer');
 const btnAppeler        = document.getElementById('btnAppeler');
 const btnRaccrocher     = document.getElementById('btnRaccrocher');
+const btnScript         = document.getElementById('btnScript');
+const scriptOverlay     = document.getElementById('scriptOverlay');
 const texteStatut       = document.getElementById('texteStatut');
 const pastilleStatut    = document.getElementById('pastilleStatut');
 const zoneTimer         = document.getElementById('zoneTimer');
@@ -165,7 +167,16 @@ function arreterTimer() {
 function etatAppelActif(actif) {
   btnRaccrocher.style.display = actif ? 'block' : 'none';
   btnAppeler.style.display    = actif ? 'none'  : 'block';
+  btnScript.style.display     = actif ? 'block' : 'none';
+  if (!actif) scriptOverlay.style.display = 'none';
 }
+
+btnScript.addEventListener('click', () => {
+  scriptOverlay.style.display = scriptOverlay.style.display === 'none' ? 'flex' : 'none';
+});
+document.getElementById('btnFermerScript').addEventListener('click', () => {
+  scriptOverlay.style.display = 'none';
+});
 
 // --- Récupération micro iOS ---
 // Quand iOS background une page, le MediaStreamTrack du micro se mute ou se termine.
